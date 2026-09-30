@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScinAsi | Hobby Science Lab</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Marked.js for markdown parsing in roadmaps and chat responses -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-flask">&#9883;</span>
+      <h1>ScinAsi</h1>
+    </div>
+    <div class="header-actions">
+      <button id="btn-open-inspire" class="btn btn-secondary">Inspiration AI</button>
+      <button id="btn-open-global-gallery" class="btn btn-secondary">Global Gallery</button>
+      <button id="btn-sync-trigger" class="btn btn-secondary" title="Sync with Cloudflare Worker">
+        <span id="sync-indicator" class="status-dot"></span> Sync
+      </button>
+      <button id="btn-open-settings" class="btn btn-icon" title="Settings">&#9881;</button>
+    </div>
+  </header>
+
+  <!-- Main View Area -->
+  <main class="container">
+    <!-- Filter & Action Bar -->
+    <section class="toolbar">
+      <div class="filter-group">
+        <input type="text" id="search-input" placeholder="Search experiments..." />
+        <select id="genre-filter">
+          <option value="all">All Genres</option>
+          <option value="Physics">Physics</option>
+          <option value="Chemistry">Chemistry</option>
+          <option value="Biology">Biology</option>
+          <option value="Optics">Optics</option>
+          <option value="Electronics">Electronics</option>
+        </select>
+        <select id="difficulty-filter">
+          <option value="all">All Difficulties</option>
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Advanced">Advanced</option>
+        </select>
+      </div>
+      <button id="btn-create-card" class="btn btn-primary">+ New Experiment</button>
+    </section>
+
+    <!-- Experiment Cards Grid -->
+    <section id="cards-grid" class="cards-grid">
+      <!-- Injected via JavaScript -->
+    </section>
+  </main>
+
+  <!-- Floating Bench Assistant Launcher -->
+  <button id="btn-toggle-assistant" class="floating-ai-btn" title="Open Bench Assistant">
+    &#129302; Bench Assistant
+  </button>
+
+  <!-- Slide-out AI Bench Assistant Drawer -->
+  <aside id="assistant-drawer" class="assistant-drawer hidden">
+    <div class="assistant-header">
+      <div class="assistant-title-group">
+        <h3>Bench Assistant</h3>
+        <span id="assistant-context-tag" class="context-pill">No Experiment Selected</span>
+      </div>
+      <button id="btn-close-assistant" class="btn-close">&times;</button>
+    </div>
+    <div id="chat-messages" class="chat-messages">
+      <div class="chat-msg assistant">
+        <p>I am your home bench assistant. Select an experiment card to give me context, or ask any home-lab procedure or safety question.</p>
+      </div>
+    </div>
+    <div class="chat-input-bar">
+      <textarea id="chat-input" rows="2" placeholder="Ask about procedure, safety, or household substitutions..."></textarea>
+      <button id="btn-send-chat" class="btn btn-primary">Send</button>
+    </div>
+  </aside>
+
+  <!-- Experiment Workspace Modal (4 Panels) -->
+  <div id="modal-card-workspace" class="modal-overlay hidden">
+    <div class="modal-content workspace-card">
+      <div class="workspace-header">
+        <div class="workspace-meta">
+          <input type="text" id="ws-title" placeholder="Experiment Title" />
+          <div class="meta-tags">
+            <select id="ws-genre">
+              <option value="Physics">Physics</option>
+              <option value="Chemistry">Chemistry</option>
+              <option value="Biology">Biology</option>
+              <option value="Optics">Optics</option>
+              <option value="Electronics">Electronics</option>
+            </select>
+            <select id="ws-difficulty">
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+            </select>
+            <input type="text" id="ws-duration" placeholder="e.g. 45 mins" />
+          </div>
+        </div>
+        <div class="workspace-actions">
+          <button id="btn-save-workspace" class="btn btn-primary">Save</button>
+          <button id="btn-close-workspace" class="btn-close">&times;</button>
+        </div>
+      </div>
+
+      <!-- Tab Selectors -->
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="tab-overview">Overview</button>
+        <button class="tab-btn" data-tab="tab-requirements">Requirements</button>
+        <button class="tab-btn" data-tab="tab-roadmap">Roadmap</button>
+        <button class="tab-btn" data-tab="tab-gallery">Card Gallery</button>
+      </nav>
+
+      <!-- Tab 1: Overview -->
+      <section id="tab-overview" class="tab-pane active">
+        <textarea id="ws-overview" rows="10" placeholder="Scientific overview, principles demonstrated, and expected observation..."></textarea>
+      </section>
+
+      <!-- Tab 2: Requirements -->
+      <section id="tab-requirements" class="tab-pane">
+        <div class="list-editor">
+          <div class="input-add-row">
+            <input type="text" id="input-requirement-item" placeholder="Add household item or material..." />
+            <button id="btn-add-requirement" class="btn btn-secondary">Add</button>
+          </div>
+          <ul id="ws-requirements-list" class="item-list"></ul>
+        </div>
+      </section>
+
+      <!-- Tab 3: Roadmap -->
+      <section id="tab-roadmap" class="tab-pane">
+        <div class="roadmap-editor">
+          <div class="input-step-row">
+            <input type="text" id="input-step-title" placeholder="Step title..." />
+            <textarea id="input-step-instruction" rows="2" placeholder="Step instructions..."></textarea>
+            <button id="btn-add-step" class="btn btn-secondary">Add Step</button>
+          </div>
+          <div id="ws-roadmap-list" class="roadmap-steps"></div>
+        </div>
+      </section>
+
+      <!-- Tab 4: Card Gallery -->
+      <section id="tab-gallery" class="tab-pane">
+        <div class="gallery-controls">
+          <input type="url" id="input-card-media-url" placeholder="Paste image or video link (Cloudinary / direct)..." />
+          <select id="select-card-media-type">
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+          </select>
+          <input type="text" id="input-card-media-caption" placeholder="Caption (optional)..." />
+          <button id="btn-add-card-media" class="btn btn-secondary">Add to Gallery</button>
+        </div>
+        <div id="ws-card-gallery-grid" class="media-grid"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Global Gallery Modal -->
+  <div id="modal-global-gallery" class="modal-overlay hidden">
+    <div class="modal-content global-gallery-modal">
+      <div class="modal-header">
+        <h2>Global Media Gallery</h2>
+        <button id="btn-close-global-gallery" class="btn-close">&times;</button>
+      </div>
+      <div id="global-gallery-grid" class="media-grid"></div>
+    </div>
+  </div>
+
+  <!-- Inspiration AI Modal -->
+  <div id="modal-inspire" class="modal-overlay hidden">
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h2>Inspiration AI</h2>
+        <button id="btn-close-inspire" class="btn-close">&times;</button>
+      </div>
+      <form id="form-inspire" class="form-vertical">
+        <label for="inspire-genre">Genre</label>
+        <select id="inspire-genre">
+          <option value="Physics">Physics</option>
+          <option value="Chemistry">Chemistry</option>
+          <option value="Biology">Biology</option>
+          <option value="Optics">Optics</option>
+          <option value="Electronics">Electronics</option>
+        </select>
+
+        <label for="inspire-difficulty">Difficulty</label>
+        <select id="inspire-difficulty">
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Advanced">Advanced</option>
+        </select>
+
+        <label for="inspire-complexity">Requirements Complexity</label>
+        <select id="inspire-complexity">
+          <option value="Pantry and common items">Pantry & Common Items</option>
+          <option value="Requires pharmacy/hardware store supplies">Requires Hardware/Pharmacy items</option>
+        </select>
+
+        <label for="inspire-duration">Estimated Length</label>
+        <select id="inspire-duration">
+          <option value="Under 30 mins">Under 30 mins</option>
+          <option value="1 hour">1 hour</option>
+          <option value="Multi-day process">Multi-day process</option>
+        </select>
+
+        <button type="submit" id="btn-run-inspire" class="btn btn-primary">Generate Experiment</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Settings Modal (Sync & Auth) -->
+  <div id="modal-settings" class="modal-overlay hidden">
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h2>Settings & Sync</h2>
+        <button id="btn-close-settings" class="btn-close">&times;</button>
+      </div>
+      <form id="form-settings" class="form-vertical">
+        <label for="setting-worker-url">Cloudflare Worker Base URL</label>
+        <input type="url" id="setting-worker-url" placeholder="https://science-hub-gateway.yourname.workers.dev" required />
+
+        <label for="setting-auth-token">Personal Sync Token</label>
+        <input type="password" id="setting-auth-token" placeholder="Matches Worker AUTH_TOKEN secret" required />
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Media Lightbox Overlay -->
+  <div id="lightbox-overlay" class="lightbox-overlay hidden">
+    <span id="lightbox-close" class="lightbox-close">&times;</span>
+    <div id="lightbox-container" class="lightbox-container"></div>
+  </div>
+
+  <!-- Scripts (Splitting application logic into dedicated modules) -->
+  <script src="db.js"></script>
+  <script src="sync.js"></script>
+  <script src="ai.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
